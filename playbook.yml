@@ -1,0 +1,13 @@
+- - -
+    - name : playbook for k8s cluster
+      hosts : web
+      gather_facts : yes
+      tasks:
+        - name : perform deployments
+          shell : kubectl apply -f /root/Deployment.yml
+
+        - name : deploy lb service
+          shell : kubectl apply -f /root/Service.yml 
+
+       
+          
