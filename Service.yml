@@ -1,14 +1,14 @@
-kind: Service                             
 apiVersion: v1
+kind: Service
 metadata:
-  name: mrdevops
   labels:
-    app: mrdevops
+    app: nginx
+  name: nginx-deployment-lb
 spec:
   ports:
-    - port: 8080                               
-      targetPort: 80                    
-      nodePort: 31200
+  - port: 80
+    protocol: TCP
+    targetPort: 80
   selector:
-    app: mrdevops                    
+    app: nginx
   type: LoadBalancer                   
