@@ -1,0 +1,68 @@
+node {
+    
+    stage('git checkout') {
+        git branch: 'main', url: 'https://github.com/ganga2166/k8s-project.git'
+    }
+    
+    stage('sending files to ansible') {
+        
+        sshagent(['ansible']) {
+            
+         sh 'ssh -o StrictHostKeyChecking=no ubuntu@10.0.0.172'
+         sh 'scp /var/lib/jenkins/workspace/k8s-project/Dockerfile ubuntu@10.0.0.172:/home/ubuntu/'
+         }
+        
+    }
+    
+    stage('building dockerfile') {
+        sshagent(['ansible']) {
+         sh 'ssh -o StrictHostKeyChecking=no ubuntu@10.0.0.172'
+         sh 'ssh -o StrictHostKeyChecking=no ubuntu@10.0.0.172 cd /home/ubuntu/'
+         sh 'ssh -o StrictHostKeyChecking=no ubuntu@10.0.0.172 docker image build -t $JOB_NAME:v1.$BUILD_ID .'
+     
+         }
+     
+    }
+    
+    stage('tagging a image'){
+       sshagent(['ansible']) {
+         sh 'ssh -o StrictHostKeyChecking=no ubuntu@10.0.0.172'
+         sh 'ssh -o StrictHostKeyChecking=no ubuntu@10.0.0.172 cd /home/ubuntu/'
+         sh 'ssh -o StrictHostKeyChecking=no ubuntu@10.0.0.172 docker image tag $JOB_NAME:v1.$BUILD_ID ganga2166/$JOB_NAME:v1.$BUILD_ID'
+         sh 'ssh -o StrictHostKeyChecking=no ubuntu@10.0.0.172 docker image tag $JOB_NAME:v1.$BUILD_ID ganga2166/$JOB_NAME:latest'         }  
+    }
+    
+    stage('pushing docker image ') {
+         sshagent(['ansible']) {
+         sh 'ssh -o StrictHostKeyChecking=no ubuntu@10.0.0.172'
+         sh 'ssh -o StrictHostKeyChecking=no ubuntu@10.0.0.172 cd /home/ubuntu/'
+         sh 'ssh -o StrictHostKeyChecking=no ubuntu@10.0.0.172 docker push ganga2166/$JOB_NAME:v1.$BUILD_ID'
+         sh 'ssh -o StrictHostKeyChecking=no ubuntu@10.0.0.172 docker push ganga2166/$JOB_NAME:latest'
+         } 
+    }
+    
+    stage('copy deploy and server yml files to k8s') {
+        sshagent(['k8s']) {
+          sh 'ssh -o StrictHostKeyChecking=no root@10.0.0.194'
+          sh 'scp /var/lib/jenkins/workspace/k8s-project/Deployment.yml root@10.0.0.194:/root/'
+          sh 'scp /var/lib/jenkins/workspace/k8s-project/Service.yml root@10.0.0.194:/root/'
+       }
+    }
+    
+    stage('copy playbook to ansible') {
+       sshagent(['ansible']) {
+            
+         sh 'ssh -o StrictHostKeyChecking=no ubuntu@10.0.0.172'
+         sh 'scp /var/lib/jenkins/workspace/k8s-project/playbook.yml ubuntu@10.0.0.172:/home/ubuntu/'
+         } 
+    }
+    
+    stage('run playbook to k8s cluster') {
+        sshagent(['ansible']) {
+            
+         sh 'ssh -o StrictHostKeyChecking=no ubuntu@10.0.0.172'
+         sh 'ssh -o StrictHostKeyChecking=no ubuntu@10.0.0.172 ansible-playbook -i hosts playbook.yml'
+         } 
+    }
+   
+}
